@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SubFinder — Movie Subtitle Search</title>
+<style>
+  :root {
+    --bg: #0e1116;
+    --surface: #171b22;
+    --surface-2: #1f2530;
+    --border: #2a313c;
+    --text: #e6e9ef;
+    --muted: #8b94a3;
+    --accent: #4f9dff;
+    --accent-hover: #6cb0ff;
+    --danger: #ff6b6b;
+    --radius: 12px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  header {
+    padding: 32px 20px 16px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+
+  header h1 {
+    margin: 0 0 6px;
+    font-size: 1.8rem;
+    letter-spacing: -0.5px;
+  }
+
+  header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  .container {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+  }
+
+  .search-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .search-bar input[type="text"] {
+    flex: 1 1 280px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 1rem;
+    outline: none;
+  }
+
+  .search-bar input[type="text"]:focus { border-color: var(--accent); }
+
+  .search-bar select {
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 0.95rem;
+    outline: none;
+    cursor: pointer;
+  }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    border-radius: var(--radius);
+    transition: background 0.15s, opacity 0.15s;
+  }
+
+  .btn-search {
+    padding: 12px 22px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  .btn-search:hover { background: var(--accent-hover); }
+  .btn-search:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .status {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+  }
+
+  .status.error { color: var(--danger); }
+
+  .spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    margin: 0 auto 14px;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .results { display: flex; flex-direction: column; gap: 14px; }
+
+  .card {
+    display: flex;
+    gap: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+
+  .poster {
+    flex: 0 0 80px;
+    width: 80px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 8px;
+    background: var(--surface-2);
+  }
+
+  .poster.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 0.7rem;
+    text-align: center;
+  }
+
+  .card-body { flex: 1; min-width: 0; }
+
+  .card-title {
+    margin: 0 0 4px;
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+  .card-title .year { color: var(--muted); font-weight: 400; }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 8px 0 12px;
+  }
+
+  .tag {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+  }
+  .tag strong { color: var(--text); font-weight: 600; }
+
+  .btn-download {
+    padding: 8px 18px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+  .btn-download:hover { background: var(--accent-hover); }
+  .btn-download:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .footer-note {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.75rem;
+    margin-top: 30px;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>🎬 SubFinder</h1>
+    <p>Search and download movie subtitles via OpenSubtitles</p>
+  </header>
+
+  <div class="container">
+    <form class="search-bar" id="searchForm">
+      <input type="text" id="queryInput" placeholder="Type a movie name…" autocomplete="off" />
+      <select id="langSelect">
+        <option value="en">English</option>
+        <option value="hi">Hindi</option>
+        <option value="es">Spanish</option>
+        <option value="fr">French</option>
+        <option value="de">German</option>
+        <option value="it">Italian</option>
+        <option value="pt">Portuguese</option>
+        <option value="ru">Russian</option>
+        <option value="ja">Japanese</option>
+        <option value="zh">Chinese</option>
+        <option value="ar">Arabic</option>
+        <option value="ko">Korean</option>
+      </select>
+      <button type="submit" class="btn-search" id="searchBtn">Search</button>
+    </form>
+
+    <div id="status"></div>
+    <div class="results" id="results"></div>
+
+    <p class="footer-note">Subtitles provided by OpenSubtitles.com</p>
+  </div>
+
+<script>
+  // ====== CONFIG ======
+  const API_KEY = "	wb0OjlWpqWovqZD7xHumIPaZIPiiunml";
+  const USER_AGENT = "MySubApp v1.0";
+  const BASE_URL = "https://api.opensubtitles.com/api/v1";
+
+  // ====== DOM ======
+  const form = document.getElementById("searchForm");
+  const queryInput = document.getElementById("queryInput");
+  const langSelect = document.getElementById("langSelect");
+  const searchBtn = document.getElementById("searchBtn");
+  const statusEl = document.getElementById("status");
+  const resultsEl = document.getElementById("results");
+
+  // Shared headers for the OpenSubtitles API.
+  // Note: User-Agent is a forbidden header in browsers and may be stripped;
+  // it is included per spec but the API also accepts the Api-Key auth.
+  function apiHeaders(extra = {}) {
+    return {
+      "Api-Key": API_KEY,
+      "Content-Type": "application/json",
+      "User-Agent": USER_AGENT,
+      ...extra,
+    };
+  }
+
+  function setStatus(html, isError = false) {
+    statusEl.className = "status" + (isError ? " error" : "");
+    statusEl.innerHTML = html;
+  }
+
+  function clearStatus() {
+    statusEl.className = "";
+    statusEl.innerHTML = "";
+  }
+
+  function showLoading(message) {
+    statusEl.className = "status";
+    statusEl.innerHTML = `<div class="spinner"></div>${message}`;
+  }
+
+  // ====== SEARCH ======
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const query = queryInput.value.trim();
+    const language = langSelect.value;
+
+    if (!query) {
+      setStatus("Please enter a movie name.", true);
+      return;
+    }
+
+    resultsEl.innerHTML = "";
+    searchBtn.disabled = true;
+    showLoading("Searching subtitles…");
+
+    try {
+      const url = `${BASE_URL}/subtitles?query=${encodeURIComponent(query)}&languages=${encodeURIComponent(language)}`;
+      const res = await fetch(url, { method: "GET", headers: apiHeaders() });
+
+      if (res.status === 429) {
+        setStatus("⏳ API rate limit reached. Please wait a moment and try again.", true);
+        return;
+      }
+      if (res.status === 401 || res.status === 403) {
+        setStatus("🔑 Invalid or missing API key. Set a valid API_KEY in the source.", true);
+        return;
+      }
+      if (!res.ok) {
+        setStatus(`Something went wrong (HTTP ${res.status}). Please try again.`, true);
+        return;
+      }
+
+      const data = await res.json();
+      const items = data.data || [];
+
+      if (items.length === 0) {
+        setStatus("No subtitles found for that search. Try a different title or language.");
+        return;
+      }
+
+      clearStatus();
+      renderResults(items);
+    } catch (err) {
+      setStatus("🌐 Network error — check your connection and try again.", true);
+      console.error(err);
+    } finally {
+      searchBtn.disabled = false;
+    }
+  });
+
+  // ====== RENDER ======
+  function renderResults(items) {
+    resultsEl.innerHTML = "";
+    for (const item of items) {
+      const attr = item.attributes || {};
+      const feat = attr.feature_details || {};
+      const file = (attr.files && attr.files[0]) || {};
+
+      const title = feat.movie_name || feat.title || attr.release || "Unknown title";
+      const year = feat.year ? `(${feat.year})` : "";
+      const language = (attr.language || "—").toUpperCase();
+      const downloads = attr.download_count != null ? attr.download_count.toLocaleString() : "0";
+      const uploader = (attr.uploader && attr.uploader.name) || "Anonymous";
+      const format = (attr.format || "SRT").toUpperCase();
+      const fileId = file.file_id;
+      const poster = attr.feature_details && attr.feature_details.img_url
+        ? attr.feature_details.img_url
+        : (attr.url_poster || null);
+
+      const card = document.createElement("div");
+      card.className = "card";
+
+      const posterHtml = poster
+        ? `<img class="poster" src="${poster}" alt="${escapeHtml(title)} poster" onerror="this.classList.add('placeholder');this.removeAttribute('src');this.textContent='No poster';" />`
+        : `<div class="poster placeholder">No poster</div>`;
+
+      card.innerHTML = `
+        ${posterHtml}
+        <div class="card-body">
+          <h3 class="card-title">${escapeHtml(title)} <span class="year">${year}</span></h3>
+          <div class="meta">
+            <span class="tag">Language <strong>${language}</strong></span>
+            <span class="tag">Format <strong>${format}</strong></span>
+            <span class="tag">Uploader <strong>${escapeHtml(uploader)}</strong></span>
+            <span class="tag">Downloads <strong>${downloads}</strong></span>
+          </div>
+          <button class="btn-download" ${fileId ? "" : "disabled"}>
+            ${fileId ? "Download .srt" : "Unavailable"}
+          </button>
+        </div>
+      `;
+
+      const btn = card.querySelector(".btn-download");
+      if (fileId) {
+        btn.addEventListener("click", () => handleDownload(btn, fileId, title));
+      }
+
+      resultsEl.appendChild(card);
+    }
+  }
+
+  // ====== DOWNLOAD (two-step) ======
+  async function handleDownload(btn, fileId, title) {
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Preparing…";
+
+    try {
+      // Step 1: request a temporary download link.
+      const res = await fetch(`${BASE_URL}/download`, {
+        method: "POST",
+        headers: apiHeaders(),
+        body: JSON.stringify({ file_id: fileId }),
+      });
+
+      if (res.status === 429) {
+        alert("⏳ Rate limit / download quota reached. Please wait before downloading again.");
+        return;
+      }
+      if (res.status === 406) {
+        alert("Daily download quota exceeded for this account.");
+        return;
+      }
+      if (!res.ok) {
+        alert(`Could not get download link (HTTP ${res.status}).`);
+        return;
+      }
+
+      const data = await res.json();
+      const link = data.link;
+      const fileName = data.file_name || `${sanitize(title)}.srt`;
+
+      if (!link) {
+        alert("No download link returned by the API.");
+        return;
+      }
+
+      // Step 2: fetch the actual subtitle file content.
+      btn.textContent = "Downloading…";
+      const fileRes = await fetch(link);
+      if (!fileRes.ok) {
+        alert(`Failed to fetch subtitle file (HTTP ${fileRes.status}).`);
+        return;
+      }
+      const blob = await fileRes.blob();
+      triggerDownload(blob, fileName);
+    } catch (err) {
+      alert("🌐 Network error while downloading. Please try again.");
+      console.error(err);
+    } finally {
+      // Respect rate limit: keep button disabled briefly after each use.
+      btn.textContent = "Please wait…";
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.textContent = original;
+      }, 3000);
+    }
+  }
+
+  function triggerDownload(blob, fileName) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  // ====== UTIL ======
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+  function sanitize(str) {
+    return String(str).replace(/[^a-z0-9\-_ ]/gi, "").trim() || "subtitle";
+  }
+</script>
+</body>
+</html>
