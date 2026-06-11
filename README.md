@@ -35,7 +35,7 @@ Replace `YOUR_KEY_HERE` with your actual API key.
 
 ### 3. Open in browser
 
-Just double-click `subfinder.html` — no server, no install, no setup needed.
+Just double-click `index.html` — no server, no install, no setup needed.
 
 ---
 
